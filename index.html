@@ -1,0 +1,346 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IKS → CKS Lab</title>
+<style>
+  :root{
+    --bg:#faf7f2; --card:#ffffff; --ink:#2a2420; --muted:#6b6259;
+    --accent:#b5651d; --accent2:#2f6f5e; --line:#e7ddd0; --warn:#8a5a00;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#1b1815; --card:#25211d; --ink:#f1ece4; --muted:#b9ada0;
+      --accent:#e8a463; --accent2:#7fd6bd; --line:#3a332c; --warn:#f0c37b;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#1b1815; --card:#25211d; --ink:#f1ece4; --muted:#b9ada0;
+    --accent:#e8a463; --accent2:#7fd6bd; --line:#3a332c; --warn:#f0c37b;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-padding-top:env(safe-area-inset-top,0px);}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:Georgia,'Times New Roman',serif; line-height:1.55;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  header{padding:20px 16px 14px; text-align:center; border-bottom:1px solid var(--line);}
+  header h1{margin:0 0 4px; font-size:1.5rem;}
+  header p{margin:0; color:var(--muted); font-size:0.9rem;}
+  .intro{max-width:640px;margin:12px auto 0;font-size:0.95rem;color:var(--ink);
+    background:color-mix(in srgb, var(--accent) 10%, var(--card)); border-radius:10px; padding:12px 14px; text-align:left;}
+  nav{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; padding:14px 12px; max-width:900px; margin:0 auto;}
+  nav button{font-family:inherit; font-size:0.85rem; padding:8px 12px; border-radius:8px;
+    border:1px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer;}
+  nav button.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+  main{max-width:820px; margin:0 auto; padding:0 16px 60px;}
+  section{display:none;}
+  section.active{display:block;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:14px;}
+  .plain{font-size:0.97rem; margin-bottom:4px;}
+  .plain b{color:var(--accent);}
+  details{margin-top:10px; border-top:1px dashed var(--line); padding-top:8px;}
+  summary{cursor:pointer; font-size:0.85rem; color:var(--muted);}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;}
+  @media (max-width:600px){.grid2{grid-template-columns:1fr;}}
+  .box{border-radius:8px; padding:9px 11px; font-size:0.82rem;}
+  .box.iks{background:color-mix(in srgb, var(--accent) 12%, var(--card));}
+  .box.cks{background:color-mix(in srgb, var(--accent2) 14%, var(--card));}
+  .box b{display:block; margin-bottom:3px;}
+  label{display:block; font-size:0.85rem; margin:8px 0 4px; color:var(--muted);}
+  input[type=text], input[type=number], textarea{
+    width:100%; font-family:inherit; padding:7px 9px; border-radius:6px;
+    border:1px solid var(--line); background:var(--bg); color:var(--ink); font-size:0.9rem;}
+  input[type=range]{width:100%;}
+  textarea{resize:vertical;}
+  button.run{margin-top:12px; padding:9px 16px; border-radius:8px; border:none;
+    background:var(--accent2); color:#fff; font-family:inherit; font-size:0.9rem; cursor:pointer;}
+  .out{margin-top:12px; padding:10px 12px; border-radius:8px; background:var(--bg); border:1px dashed var(--line); font-size:0.88rem; overflow-x:auto;}
+  .out div{margin:3px 0;}
+  table.trace{border-collapse:collapse; width:100%; font-size:0.85rem; margin-top:6px;}
+  table.trace th, table.trace td{border:1px solid var(--line); padding:4px 8px; text-align:center;}
+  .metric{display:inline-block; margin:4px 10px 4px 0; font-size:0.85rem;}
+  .metric b{font-size:1.1rem; display:block;}
+  .bar-row{display:flex; align-items:center; gap:8px; margin:4px 0;}
+  .bar-label{width:70px; font-size:0.8rem;}
+  .bar-track{flex:1; background:var(--line); border-radius:4px; height:16px; overflow:hidden;}
+  .bar-fill{height:100%; background:var(--accent2);}
+  .footer-note{text-align:center; color:var(--muted); font-size:0.78rem; margin:24px 0;}
+</style>
+</head>
+<body>
+<header>
+  <h1>IKS → CKS Lab</h1>
+  <p>Old Indian methods, shown solving problems computers solve today</p>
+  <div class="intro">
+    <b>What is this page?</b> Five old Indian methods — from poetry, mathematics, logic, and ethics —
+    turn out to work like tools we use in computers today. For each one, pick a tab, read the plain
+    explanation, then press <b>Run</b> to actually watch it work on a real example. No coding
+    knowledge needed.
+  </div>
+</header>
+<nav id="nav"></nav>
+<main id="main"></main>
+<p class="footer-note">Each tab: what the old method does → what it resembles today → where that's used → why it matters.</p>
+
+<script>
+const MODULES = [
+  {id:"chandas", title:"1. Piṅgala's Metre Patterns"},
+  {id:"kaprekar", title:"2. Kaprekar's Number Trick"},
+  {id:"sandhi", title:"3. Pāṇini's Word-Fusion Rules"},
+  {id:"nyaya", title:"4. Nyāya's Reasoning Steps"},
+  {id:"ethics", title:"5. Gītā's Fairness Question"},
+];
+const nav = document.getElementById("nav"), main = document.getElementById("main");
+MODULES.forEach(m=>{
+  const b=document.createElement("button");
+  b.textContent=m.title; b.id="nav-"+m.id; b.onclick=()=>showModule(m.id);
+  nav.appendChild(b);
+});
+function showModule(id){
+  MODULES.forEach(m=>document.getElementById("nav-"+m.id).classList.toggle("active", m.id===id));
+  document.querySelectorAll("section").forEach(s=>s.classList.toggle("active", s.id===id));
+}
+function techBox(iks,cks){
+  return `<details><summary>Technical details, for the curious</summary>
+    <div class="grid2">
+      <div class="box iks"><b>Formal IKS method</b>${iks}</div>
+      <div class="box cks"><b>Formal CS/AI equivalent</b>${cks}</div>
+    </div></details>`;
+}
+
+/* ---------------- 1. Chandas (Pingala) ---------------- */
+const LONG_V=new Set(["ā","ī","ū","e","o"]);
+function scanSyllables(list){ return list.map(([v,heavy])=> (LONG_V.has(v)||heavy) ? "G":"L").join(""); }
+function sec_chandas(){ return `<section id="chandas"><div class="card">
+  <p class="plain"><b>The old method:</b> Sanskrit poets marked every syllable in a verse as either
+  short or long, then studied the pattern this made across the whole line — similar to noticing the
+  rhythm in a piece of music. Piṅgala, over 2,000 years ago, wrote down systematic rules for these
+  patterns.</p>
+  <p class="plain"><b>What it resembles today:</b> Computers represent information as patterns of two
+  symbols (0s and 1s). Checking whether a sequence matches a known valid shape — and finding exactly
+  where it breaks — is also how a spreadsheet checks a phone number, or a spell-checker flags an error.</p>
+  <p class="plain"><b>Where this is used today:</b> Proofreading old scanned manuscripts, validating
+  the format of forms, and any software that checks "does this follow the expected pattern?"</p>
+  <p class="plain"><b>Why it matters:</b> A huge number of problems boil down to "does this sequence
+  match an expected pattern, and if not, where exactly does it go wrong?" That single idea powers
+  spell-checkers, format validators, and manuscript proofreading tools alike.</p>
+  ${techBox(
+    "Classifies each syllable as laghu (short, L) or guru (long, G); enumerates all 2ⁿ patterns for a line of n syllables (Chandaḥśāstra).",
+    "Binary pattern representation, plus constraint/pattern matching against a known valid sequence."
+  )}
+  <label>Try it — enter a line as vowel:heavy pairs (heavy=1 if followed by a conjunct/anusvāra); a valid line here has 8 syllables</label>
+  <input type="text" id="c_line" value="a:0 ā:0 i:1 a:0 u:0 e:0 a:0 ā:0">
+  <button class="run" onclick="runChandas()">Check this line</button>
+  <div class="out" id="c_out"></div>
+</div></section>`; }
+function runChandas(){
+  const out=document.getElementById("c_out");
+  try{
+    const syll=document.getElementById("c_line").value.trim().split(/\s+/).map(tok=>{ const [v,h]=tok.split(":"); return [v, h==="1"]; });
+    const pattern=scanSyllables(syll);
+    let html=`<div>Pattern found: <b>${pattern}</b> (${pattern.length} syllables — L=short, G=long)</div>`;
+    html += pattern.length!==8
+      ? `<div style="color:var(--warn)">This breaks the expected pattern: expected 8 syllables, found ${pattern.length}. In a real manuscript, this is exactly where a scanning error would be flagged.</div>`
+      : `<div>This matches the expected 8-syllable pattern. ✅</div>`;
+    out.innerHTML=html;
+  }catch(e){ out.innerHTML=`<div style="color:var(--warn)">Please use the vowel:0 or vowel:1 format shown above.</div>`; }
+}
+
+/* ---------------- 2. Kaprekar ---------------- */
+function kaprekarSteps(n){
+  const trace=[];
+  if(new Set(String(n).padStart(4,'0')).size===1) return {error:"All four digits are the same — this never reaches 6174."};
+  let steps=0;
+  while(n!==6174){
+    const d=String(n).padStart(4,'0').split('');
+    const big=parseInt([...d].sort().reverse().join(''),10);
+    const small=parseInt([...d].sort().join(''),10);
+    n=big-small; steps++; trace.push([big,small,n]);
+    if(steps>15) return {error:"Did not converge — check the input."};
+  }
+  return {steps,trace};
+}
+function sec_kaprekar(){ return `<section id="kaprekar"><div class="card">
+  <p class="plain"><b>The old method:</b> D. R. Kaprekar, a 20th-century Indian mathematician, found
+  that if you take almost any 4-digit number, arrange its digits highest-to-lowest and lowest-to-highest,
+  and subtract the two — then repeat this again and again — you always land on the same number: 6174,
+  usually within 7 steps.</p>
+  <p class="plain"><b>What it resembles today:</b> A program that repeats one simple step over and over
+  until the answer stops changing is called a "loop with a stopping condition" — one of the most basic
+  and powerful tools in programming.</p>
+  <p class="plain"><b>Where this is used today:</b> Your phone's GPS refines its estimate of your location
+  step by step until it settles on an answer. Search engines rank web pages by repeating a scoring step
+  until the rankings stabilize. Many science and engineering calculations work the same way.</p>
+  <p class="plain"><b>Why it matters:</b> "Keep repeating a simple rule until it settles down" is a
+  genuinely powerful way to solve problems that don't have an obvious direct answer — and understanding
+  when and why it settles is a core computer-science skill.</p>
+  ${techBox(
+    "Arrange a 4-digit number's digits descending and ascending, subtract, repeat until reaching the fixed point 6174.",
+    "An iterative loop with a termination condition (a fixed point) — the same structure behind many numerical algorithms."
+  )}
+  <label>Try it — enter any 4-digit number (not all digits the same)</label>
+  <input type="number" id="k_n" value="3524" min="1000" max="9999">
+  <button class="run" onclick="runKaprekar()">Run the routine</button>
+  <div class="out" id="k_out"></div>
+</div></section>`; }
+function runKaprekar(){
+  const out=document.getElementById("k_out");
+  const n0=+document.getElementById("k_n").value;
+  if(n0<1000||n0>9999){ out.innerHTML="Please enter a 4-digit number."; return; }
+  const res=kaprekarSteps(n0);
+  if(res.error){ out.innerHTML=`<div style="color:var(--warn)">${res.error}</div>`; return; }
+  let html=`<div>Reached <b>6174</b> in <b>${res.steps}</b> step(s):</div>
+    <table class="trace"><tr><th>Step</th><th>High→Low</th><th>Low→High</th><th>Difference</th></tr>`;
+  res.trace.forEach((row,i)=>{ html+=`<tr><td>${i+1}</td><td>${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td></tr>`; });
+  html+="</table>";
+  out.innerHTML=html;
+}
+
+/* ---------------- 3. Sandhi (Panini) ---------------- */
+const SANDHI_RULES=[["a+a","ā"],["a+ā","ā"],["ā+a","ā"],["i+i","ī"],["u+u","ū"],["a+i","e"],["a+u","o"],["a+e","ai"],["a+o","au"]];
+function applySandhi(t){ SANDHI_RULES.forEach(([o,n])=>{ t=t.split(o).join(n); }); return t; }
+function sandhiJoin(words){ let j=words[0]; for(let i=1;i<words.length;i++){ j=applySandhi(j+"+"+words[i]); } return j; }
+function sec_sandhi(){ return `<section id="sandhi"><div class="card">
+  <p class="plain"><b>The old method:</b> In Sanskrit, when two words are spoken together, their sounds
+  often blend into a new sound — "deva" + "indra" becomes "devendra." Pāṇini, over 2,000 years ago,
+  wrote exact rules for which sounds blend into which.</p>
+  <p class="plain"><b>What it resembles today:</b> Computers use the same idea — "if you see this
+  pattern, replace it with that pattern" — to clean up and search through text. This is how autocorrect
+  fixes words, and how search finds text that isn't written exactly the way you typed it.</p>
+  <p class="plain"><b>Where this is used today:</b> Spell-checkers, voice assistants understanding
+  slurred or fast speech, search engines matching a name spelled two different ways, and digitising
+  old handwritten documents so they can be searched.</p>
+  <p class="plain"><b>Why it matters:</b> Real-world data is usually messy, not neat and uniform.
+  Pāṇini's insight — write clear rules for how things fuse and unfuse, in a fixed order — is the same
+  insight modern software uses to handle messiness: don't just search for the exact thing, understand
+  the rules of how it changes.</p>
+  ${techBox(
+    "An ordered set of sandhi rules describing sound changes at word boundaries (Aṣṭādhyāyī).",
+    "A rewrite/production system: ordered find-and-replace rules applied until none apply, similar to regex normalisation."
+  )}
+  <label>Try it — words separated by spaces</label>
+  <input type="text" id="s_words" value="deva indra sarva udaya maha atma">
+  <label>Search for this word</label>
+  <input type="text" id="s_query" value="indra">
+  <button class="run" onclick="runSandhi()">Join the words, then search</button>
+  <div class="out" id="s_out"></div>
+</div></section>`; }
+function runSandhi(){
+  const words=document.getElementById("s_words").value.trim().split(/\s+/);
+  const query=document.getElementById("s_query").value.trim();
+  const out=document.getElementById("s_out");
+  if(words.length<2){ out.innerHTML="Enter at least two words."; return; }
+  const joined=sandhiJoin(words);
+  const plainHit=joined.includes(query);
+  let awareHit=plainHit;
+  for(let i=0;i<words.length-1 && !awareHit;i++){ if(sandhiJoin([words[i],words[i+1]]).includes(query)) awareHit=true; }
+  out.innerHTML=`<div>After the words blend together: <b>${joined}</b></div>
+    <div class="metric">Plain search for "${query}"<b>${plainHit?"FOUND":"NOT FOUND"}</b></div>
+    <div class="metric">Rule-aware search<b>${awareHit?"FOUND":"NOT FOUND"}</b></div>
+    ${(!plainHit && awareHit) ? '<div>This is exactly the kind of miss a plain search engine makes on fused text — and why the rule-aware version is needed.</div>' : ''}`;
+}
+
+/* ---------------- 4. Nyaya ---------------- */
+function forwardChain(facts, rules){
+  facts=new Set(facts); const trace=[]; let changed=true;
+  while(changed){ changed=false;
+    for(const r of rules){ if(r.premises.every(p=>facts.has(p)) && !facts.has(r.conclusion)){ facts.add(r.conclusion); trace.push([r.id,r.premises,r.conclusion]); changed=true; } }
+  }
+  return [facts,trace];
+}
+function sec_nyaya(){ return `<section id="nyaya"><div class="card">
+  <p class="plain"><b>The old method:</b> Ancient Indian logicians insisted that any claim must come
+  with its reason and a supporting example, laid out in five clear steps, so that anyone could check
+  whether the reasoning actually held up.</p>
+  <p class="plain"><b>What it resembles today:</b> This is the same principle behind an "if this, then
+  that" rule engine, where a computer makes decisions by chaining simple rules — and behind
+  "explainable AI," where a system must show why it decided something, not just what it decided.</p>
+  <p class="plain"><b>Where this is used today:</b> Loan and scholarship eligibility systems, medical
+  decision-support tools, spam filters that must justify a flag, and any automated decision that
+  regulators require to be explainable.</p>
+  <p class="plain"><b>Why it matters:</b> As automated decisions affect more of daily life, being able
+  to show the reason behind a decision — not just the decision itself — is becoming a requirement. This
+  2,000-year-old reasoning structure is essentially that same requirement, stated far earlier.</p>
+  ${techBox(
+    "The five-membered argument (pratijñā, hetu, udāharaṇa, upanaya, nigamana) — a claim always carries its justification.",
+    "A rule-based expert system using forward chaining: facts + if-then rules combine until no new facts follow."
+  )}
+  <label>Try it — rules, one per line: premise1,premise2 -&gt; conclusion</label>
+  <textarea id="n_rules" rows="4">income_low,attendance_high -> eligible
+eligible,first_gen -> priority</textarea>
+  <label>Known facts about this case (comma-separated)</label>
+  <input type="text" id="n_facts" value="income_low,attendance_high,first_gen">
+  <button class="run" onclick="runNyaya()">Reason it out, step by step</button>
+  <div class="out" id="n_out"></div>
+</div></section>`; }
+function runNyaya(){
+  const lines=document.getElementById("n_rules").value.trim().split("\n");
+  const rules=[];
+  lines.forEach((line,i)=>{ if(!line.includes("->")) return; const [lhs,rhs]=line.split("->");
+    rules.push({id:"Rule "+(i+1), premises:lhs.split(",").map(s=>s.trim()).filter(Boolean), conclusion:rhs.trim()}); });
+  const facts0=document.getElementById("n_facts").value.split(",").map(s=>s.trim()).filter(Boolean);
+  let html="";
+  rules.forEach(r=>{ if(r.premises.includes(r.conclusion)) html+=`<div style="color:var(--warn)">${r.id} is circular reasoning.</div>`; });
+  const [facts,trace]=forwardChain(facts0,rules);
+  html+=`<div>What we now know: <b>${[...facts].sort().join(", ")}</b></div><div>How we got there:</div>`;
+  trace.forEach(([id,prem,conc])=>{ html+=`<div>&nbsp;&nbsp;${id}: because [${prem.join(", ")}] are true → we can conclude <b>${conc}</b></div>`; });
+  if(trace.length===0) html+="<div>Nothing new could be concluded from these facts and rules.</div>";
+  document.getElementById("n_out").innerHTML=html;
+}
+
+/* ---------------- 5. Ethics (Gita/Upanishads) ---------------- */
+function mulberry32(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function gaussian(rand){ const u=1-rand(), v=rand(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+function makeDataset(bias,threshold){ const rand=mulberry32(1); const recs=[];
+  for(let i=0;i<200;i++){ const group=i%2===0?"A":"B"; const score=0.6+gaussian(rand)*0.15+(group==="A"?bias:-bias);
+    recs.push({group,score,approved:score>threshold?1:0}); } return recs; }
+function approvalRate(recs,g,key="approved"){ const grp=recs.filter(r=>r.group===g); return grp.length? grp.reduce((s,r)=>s+r[key],0)/grp.length : 0; }
+function mitigate(recs,target=0.5){ ["A","B"].forEach(g=>{ const grp=recs.filter(r=>r.group===g).sort((a,b)=>b.score-a.score);
+    const cutoff=Math.floor(grp.length*target); grp.forEach((r,idx)=>{ r.approved_fixed=idx<cutoff?1:0; }); }); return recs; }
+function bar(label,val){ return `<div class="bar-row"><div class="bar-label">${label}</div><div class="bar-track"><div class="bar-fill" style="width:${(val*100).toFixed(0)}%"></div></div><div>${(val*100).toFixed(0)}%</div></div>`; }
+function sec_ethics(){ return `<section id="ethics"><div class="card">
+  <p class="plain"><b>The old method:</b> The Bhagavad Gītā's idea of <i>lokasaṃgraha</i> — act for
+  the welfare of everyone, not just narrow self-interest — asks us to consider people beyond only the
+  ones directly using something. A related idea, <i>niṣkāma karma</i>, asks whether we've optimised for
+  the right goal, not just any measurable outcome.</p>
+  <p class="plain"><b>What it resembles today:</b> Data scientists check "fairness metrics" — comparing
+  how an automated decision affects different groups of people, not just how accurate it is overall.</p>
+  <p class="plain"><b>Where this is used today:</b> Bank loan approval systems, job-application
+  screening software, and college admission algorithms are all checked for group-level bias before
+  they're allowed to be used in many countries.</p>
+  <p class="plain"><b>Why it matters:</b> A system can be highly accurate overall and still be deeply
+  unfair to one specific group. This old ethical question — who benefits, who is affected, and what are
+  we actually optimising for — is exactly the question modern AI fairness audits try to answer.</p>
+  ${techBox(
+    "Lokasaṃgraha (Gītā 3.20): concern for the welfare of the whole world. Niṣkāma karma (Gītā 2.47): acting without fixation on a narrow outcome.",
+    "Fairness metrics in ML (e.g. demographic parity) and mitigation via group-wise threshold adjustment."
+  )}
+  <label>Simulated historical bias between two groups: <span id="b_val">0.10</span></label>
+  <input type="range" id="e_bias" min="0" max="0.3" step="0.01" value="0.1" oninput="document.getElementById('b_val').textContent=this.value">
+  <label>Approval score threshold: <span id="t_val">0.55</span></label>
+  <input type="range" id="e_thr" min="0.3" max="0.8" step="0.01" value="0.55" oninput="document.getElementById('t_val').textContent=this.value">
+  <button class="run" onclick="runEthics()">Generate a sample dataset and audit it</button>
+  <div class="out" id="e_out"></div>
+</div></section>`; }
+function runEthics(){
+  const bias=+document.getElementById("e_bias").value, thr=+document.getElementById("e_thr").value;
+  let recs=makeDataset(bias,thr);
+  const a=approvalRate(recs,"A"), b=approvalRate(recs,"B");
+  let html="<div><b>Before any fix</b></div>"+bar("Group A",a)+bar("Group B",b)+`<div>Gap between groups: ${(Math.abs(a-b)*100).toFixed(0)}%</div>`;
+  recs=mitigate(recs);
+  const a2=approvalRate(recs,"A","approved_fixed"), b2=approvalRate(recs,"B","approved_fixed");
+  html+="<div style='margin-top:10px'><b>After adjusting so both groups are approved at equal rates</b></div>"+bar("Group A",a2)+bar("Group B",b2)+`<div>Gap between groups: ${(Math.abs(a2-b2)*100).toFixed(0)}%</div>`;
+  html+="<div style='margin-top:8px;color:var(--muted);font-size:0.82rem'>Discuss: does making the approval rate equal really satisfy lokasaṃgraha, if the underlying scores still reflect old, biased history?</div>";
+  document.getElementById("e_out").innerHTML=html;
+}
+
+main.innerHTML = sec_chandas()+sec_kaprekar()+sec_sandhi()+sec_nyaya()+sec_ethics();
+showModule("chandas");
+</script>
+</body>
+</html>

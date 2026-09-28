@@ -139,8 +139,8 @@ function scanDevanagari(text){
       const mi=DV_M.indexOf(s[i]); let v="a", long=false;
       if(mi>=0){ v=DV_MR[mi]; long=!!DV_ML[mi]; i++; }
       if(onset.length>1 && syl.length) last().heavy=true;
-      syl.push({r:onset.join("")+v,long,heavy:false}); roman+=onset.join("")+v;
-    } else if(vi>=0){ syl.push({r:DV_VR[vi],long:!!DV_VL[vi],heavy:false}); roman+=DV_VR[vi]; i++; }
+      syl.push({r:onset.join("")+v,long,heavy:false,onset:onset.slice(),v}); roman+=onset.join("")+v;
+    } else if(vi>=0){ syl.push({r:DV_VR[vi],long:!!DV_VL[vi],heavy:false,onset:[],v:DV_VR[vi]}); roman+=DV_VR[vi]; i++; }
     else if(c==="ं"||c==="ः"){ if(syl.length) last().heavy=true; roman+=(c==="ं"?"ṃ":"ḥ"); i++; }
     else if(c==="ँ"){ roman+="m̐"; i++; }
     else if(c==="।"||c==="॥"){ roman+=" | "; breaks.push(syl.length); i++; }
@@ -152,6 +152,9 @@ function scanDevanagari(text){
 }
 const VERSE_OK="धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः ।\nमामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय ॥";
 const VERSE_BAD="धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः ।\nमामकाः पाण्डवाश्चैव मकुर्वत सञ्जय ॥";
+const GAY_OK="तत्सवितुर्वरेण्यं\nभर्गो देवस्य धीमहि\nधियो यो नः प्रचोदयात्";
+const GAY_BAD="तत्सवितुर्वरेण्यं\nभर्गो देवस्य धीमहि\nधियो यो नः प्रचोदात्";
+const SAMPLE={anu:[VERSE_OK,VERSE_BAD],gay:[GAY_OK,GAY_BAD]};
 function sec_chandas(){ return `<section id="chandas"><div class="card">
   <p class="plain"><b>The old method:</b> Sanskrit poets marked every syllable in a verse as either
   short or long, then studied the pattern this made across the whole line — similar to noticing the
@@ -169,19 +172,30 @@ function sec_chandas(){ return `<section id="chandas"><div class="card">
     "Classifies each syllable as laghu (short, L) or guru (long, G); enumerates all 2ⁿ patterns for a line of n syllables (Chandaḥśāstra).",
     "Binary pattern representation, plus constraint/pattern matching against a known valid sequence."
   )}
-  <label>Try it — a Sanskrit verse in Devanagari (Gītā 1.1 is filled in). You can paste another Anuṣṭubh verse.</label>
-  <textarea id="c_verse" rows="3" lang="sa">${VERSE_OK}</textarea>
+  <label>Choose the metre; a sample verse in Devanagari is filled in</label>
+  <select id="c_metre" onchange="setMetre()"><option value="anu">Anuṣṭubh (4 lines of 8): Gītā 1.1</option><option value="gay">Gāyatrī (3 lines of 8): Ṛgveda 3.62.10</option></select>
+  <label>Verse (for the Gāyatrī: one line per pāda, without ॐ भूर्भुवः स्वः)</label>
+  <textarea id="c_verse" rows="4" lang="sa">${VERSE_OK}</textarea>
   <div class="btnrow"><button class="run" onclick="runChandas()">Scan this verse</button>
   <button class="run" style="background:var(--accent)" onclick="loadBroken()">Try it with a syllable missing</button></div>
   <div class="out" id="c_out">Press "Scan this verse" to see the steps.</div>
 </div></section>`; }
-function loadBroken(){ document.getElementById("c_verse").value=VERSE_BAD; runChandas(); }
+function setMetre(){ const m=document.getElementById("c_metre").value; document.getElementById("c_verse").value=SAMPLE[m][0]; document.getElementById("c_out").innerHTML='Press "Scan this verse" to see the steps.'; }
+function loadBroken(){ const m=document.getElementById("c_metre").value; document.getElementById("c_verse").value=SAMPLE[m][1]; runChandas(); }
+const sylTxt=r=>r.syl.map(x=>x.r+"("+((x.long||x.heavy)?"G":"L")+")").join(" ");
+function restoreCands(r){
+  const c=[];
+  r.syl.forEach(x=>{ const o=x.onset, last=o[o.length-1], prev=o[o.length-2];
+    if(o.length>1&&(last==="y"||last==="v")&&prev!=="r") c.push({from:x.r,to:o.slice(0,-1).join("")+(last==="y"?"i":"u")+"·"+last+x.v}); });
+  return c;
+}
 function runChandas(){
   const out=document.getElementById("c_out"), txt=document.getElementById("c_verse").value;
   if(!/[\u0900-\u097F]/.test(txt)){ out.innerHTML="Please enter a verse in Devanagari."; return; }
+  if(document.getElementById("c_metre").value==="gay") return runGayatri(txt,out);
   const r=scanDevanagari(txt), n=r.pat.length;
   let h=`<div>Step 1 — in English letters: <b>${r.roman}</b></div>`;
-  h+=`<div>Step 2 — syllables, each marked L (light) or G (heavy):<br><span class="mono">${r.syl.map(x=>x.r+"("+((x.long||x.heavy)?"G":"L")+")").join(" ")}</span></div>`;
+  h+=`<div>Step 2 — syllables, each marked L (light) or G (heavy):<br><span class="mono">${sylTxt(r)}</span></div>`;
   h+=`<div>Step 3 — count: <b>${n}</b> syllables (one Anuṣṭubh verse has 32: four lines of 8)</div>`;
   if(n!==32){
     const halves=r.breaks.map((b,k)=>b-(k?r.breaks[k-1]:0));
@@ -204,6 +218,24 @@ function runChandas(){
   }
   out.innerHTML=h;
 }
+function runGayatri(txt,out){
+  const lines=txt.split(/\n/).map(s=>s.trim()).filter(Boolean);
+  if(lines.length!==3){ out.innerHTML="The Gāyatrī has 3 lines (pādas). Please put each pāda on its own line, and leave out ॐ भूर्भुवः स्वः, which is not part of the 24 syllables."; return; }
+  let h="<div>The Gāyatrī metre has 3 lines (pādas) of 8 syllables, so 24 in all.</div>", total=0, restored=false, allOk=true;
+  lines.forEach((ln,p)=>{
+    const r=scanDevanagari(ln), n=r.syl.length; total+=n;
+    h+=`<div style="margin-top:6px"><b>Line ${p+1}:</b> ${r.roman}</div><div class="mono">${sylTxt(r)}</div>`;
+    if(n===8){ h+=`<div>${n} syllables ✓</div>`; return; }
+    const c=n===7?restoreCands(r):[];
+    if(c.length){ restored=true; h+=`<div style="color:var(--warn)">${n} syllables, one short. In Vedic metre a semivowel can be read as a full vowel (y as iy, v as uv). Restoring <b>${c.map(x=>x.from+" → "+x.to).join(" or ")}</b> gives 8 ✓</div>`; }
+    else { allOk=false; h+=`<div style="color:var(--warn)">✗ ${n} syllables, expected 8${n===7?" (and no restorable y/v cluster was found)":""}. Look for a missing or extra syllable in this line.</div>`; }
+  });
+  h+= !allOk ? `<div style="margin-top:8px;color:var(--warn)">⚠ This text does not fit the Gāyatrī pattern, even after restoration.</div>`
+    : `<div style="margin-top:8px">${restored?`As written: ${total} syllables. With the restoration above: 24 ✅. Sources note that the attested text is one short in line 1; some traditions keep 23 (called <i>nicṛt</i> Gāyatrī).`:"✅ 24 syllables."}</div>`;
+  h+=`<div style="color:var(--muted);font-size:0.8rem;margin-top:6px">L/G weights are shown for information only: for the Gāyatrī this demo checks syllable counts, not the weight pattern. The restoration check skips r + y/v clusters, which usually come from sandhi between words.</div>`;
+  out.innerHTML=h;
+}
+
 /* ---------------- 2. Kaprekar ---------------- */
 function kaprekarSteps(n){
   const trace=[];

@@ -100,6 +100,8 @@ const MODULES = [
   {id:"sandhi", title:"3. Pāṇini's Word-Fusion Rules"},
   {id:"nyaya", title:"4. Nyāya's Reasoning Steps"},
   {id:"ethics", title:"5. Gītā's Fairness Question"},
+  {id:"vedic", title:"6. Fast Multiplication (Vedic Maths)"},
+  {id:"kuttaka", title:"7. Kuṭṭaka (Solving by Division)"},
 ];
 const nav = document.getElementById("nav"), main = document.getElementById("main");
 MODULES.forEach(m=>{
@@ -516,7 +518,112 @@ function runEthics(model){
   document.getElementById("e_out").innerHTML=h;
 }
 
-main.innerHTML = sec_chandas()+sec_kaprekar()+sec_sandhi()+sec_nyaya()+sec_ethics();
+
+/* ---------------- 6. Vedic multiplication (Urdhva-Tiryagbhyam) ---------------- */
+function urdhvaTrace(a,b){
+  const da=String(a).split('').reverse().map(Number), db=String(b).split('').reverse().map(Number);
+  const n=da.length+db.length-1; let carry=0; const digits=[]; const trace=[];
+  for(let k=0;k<n;k++){
+    let pairs=[]; for(let i=0;i<da.length;i++){ const j=k-i; if(j>=0&&j<db.length) pairs.push([i,j]); }
+    const s=pairs.reduce((acc,[i,j])=>acc+da[i]*db[j],0);
+    const total=s+carry, digit=total%10; carry=Math.floor(total/10);
+    digits.push(digit); trace.push({pairs,s,total,digit,carry,da,db});
+  }
+  while(carry){ digits.push(carry%10); carry=Math.floor(carry/10); }
+  return {result:Number(digits.slice().reverse().join('')), trace};
+}
+function sec_vedic(){ return `<section id="vedic"><div class="card">
+  <p class="plain"><b>The old method:</b> "Vedic mathematics" is a set of calculation shortcuts published in 1965
+  by Bharati Krishna Tirthaji, who said he found them in the Vedas. One sutra, <i>Ūrdhva-Tiryagbhyam</i>
+  ("vertically and crosswise"), multiplies numbers by adding up cross-products column by column instead of
+  the long multiplication most of us learn in school.</p>
+  <p class="plain"><b>Important honesty check:</b> Most historians and mathematicians who have studied this
+  say the sutras are not actually found in the Vedas — Tirthaji's own book admits the formulas "are not to be
+  found in the present recensions" of the text he named (Dani, 1993; Raju, 2001). The tricks themselves are
+  real and correct. Whether they are genuinely ancient is disputed. Both facts matter, and this page states
+  both.</p>
+  <p class="plain"><b>What it resembles today:</b> Multiplying several digit-pairs at once instead of one
+  at a time is exactly how computer chips multiply numbers in parallel, rather than one step after another.</p>
+  <p class="plain"><b>Where this is used today:</b> This is not just a resemblance — the identical method is
+  used in real published engineering research to design faster multiplier circuits for processors, digital
+  signal processing chips, and FPGAs, because computing cross-products in parallel is faster in hardware than
+  ordinary long multiplication (see the technical box for citations).</p>
+  <p class="plain"><b>Why it matters:</b> The same arithmetic idea can be "just a mental-maths trick" for a
+  student and a real design choice for a chip engineer. It shows that how you organise a calculation — not
+  just what the calculation is — can make it faster, which is a core idea in computer science.</p>
+  ${techBox(
+    "Ūrdhva-Tiryagbhyam (\"vertically and crosswise\"), one of the sutras in Tirthaji's 1965 Vedic Mathematics.",
+    "Column-wise convolution of digits with carry propagation — the same structure used in parallel hardware multiplier circuits (Thapliyal &amp; Srinivas; multiple IEEE/VLSI papers on Vedic multipliers, 2007–2022)."
+  )}
+  <label>Try it — two numbers to multiply</label>
+  <input type="text" id="v_a" value="23"><input type="text" id="v_b" value="45" style="margin-top:6px">
+  <button class="run" onclick="runVedic()">Show the cross-multiply, column by column</button>
+  <div class="out" id="v_out"></div>
+</div></section>`; }
+function runVedic(){
+  const a=document.getElementById("v_a").value.trim(), b=document.getElementById("v_b").value.trim(), out=document.getElementById("v_out");
+  if(!/^\d+$/.test(a)||!/^\d+$/.test(b)){ out.innerHTML="Please enter two whole numbers."; return; }
+  const {result,trace}=urdhvaTrace(a,b);
+  let h=`<div><b>${a} × ${b} = ${result}</b></div><table class="trace"><tr><th>Column</th><th>Cross-products added</th><th>Sum</th><th>+ carry in</th><th>Digit</th><th>Carry out</th></tr>`;
+  trace.forEach((t,k)=>{
+    const terms=t.pairs.map(([i,j])=>`d${i}×d${j}`).join(" + ");
+    h+=`<tr><td>${k}</td><td>${terms}</td><td>${t.s}</td><td>${t.total}</td><td>${t.digit}</td><td>${t.carry}</td></tr>`;
+  });
+  h+=`</table><div style="margin-top:6px">Check: ${a} × ${b} = ${Number(a)*Number(b)} the ordinary way — ${Number(a)*Number(b)===result?"matches ✅":"MISMATCH ⚠"}.</div>`;
+  out.innerHTML=h;
+}
+
+
+/* ---------------- 7. Kuttaka (Aryabhata) -> modular inverse -> toy RSA ---------------- */
+function extGcd(a,b){ if(b===0) return [a,1,0]; const [g,x1,y1]=extGcd(b,a%b); return [g,y1,x1-Math.floor(a/b)*y1]; }
+function modInverse(a,m){ const [g,x]=extGcd(a,m); if(g!==1) throw new Error(`No inverse exists: gcd(${a}, ${m}) = ${g}, not 1`); return ((x%m)+m)%m; }
+function powModBig(base,exp,mod){ let r=1n; base=BigInt(base)%BigInt(mod); exp=BigInt(exp); mod=BigInt(mod); while(exp>0n){ if(exp&1n) r=(r*base)%mod; base=(base*base)%mod; exp>>=1n; } return r; }
+function sec_kuttaka(){ return `<section id="kuttaka"><div class="card">
+  <p class="plain"><b>The old method:</b> Āryabhaṭa's <i>kuṭṭaka</i> ("the pulveriser"), from the *Āryabhaṭīya*
+  (499 CE), solves equations like "find a whole number x so that ax leaves remainder b when divided by m" —
+  by a process of repeated division, breaking the problem down until it's easy to solve, then building the
+  answer back up.</p>
+  <p class="plain"><b>What it resembles today:</b> The same repeated-division process is called the Extended
+  Euclidean Algorithm in computer science. It finds a number's "opposite" for a particular kind of clock-like
+  arithmetic (called modular arithmetic), used constantly in computing.</p>
+  <p class="plain"><b>Where this is used today:</b> This exact step is part of how RSA encryption generates its
+  private key from its public key. RSA is what puts the padlock icon in your browser and secures HTTPS,
+  online banking, and digital signatures.</p>
+  <p class="plain"><b>Why it matters:</b> A method invented 1,500 years ago to solve a puzzle about remainders
+  turns out to be one of the load-bearing steps of the encryption protecting the internet today. Few IKS
+  methods have a modern application this direct and this large-scale.</p>
+  ${techBox(
+    "Kuṭṭaka solves ax − my = b for integer x, y through repeated division (Āryabhaṭīya, Gaṇitapāda, verses 32–33).",
+    "The Extended Euclidean Algorithm: given a and m, computes x such that a·x ≡ 1 (mod m), the modular inverse."
+  )}
+  <label>Try it — two prime numbers, and a public exponent</label>
+  <input type="text" id="ku_p" value="61"> <input type="text" id="ku_q" value="53" style="margin-top:6px"> <input type="text" id="ku_e" value="17" style="margin-top:6px">
+  <label>A message to encrypt (a whole number smaller than p×q)</label>
+  <input type="text" id="ku_m" value="65">
+  <button class="run" onclick="runKuttaka()">Run kuṭṭaka → find the key → encrypt → decrypt</button>
+  <div class="out" id="ku_out"></div>
+  <div style="color:var(--muted);font-size:0.8rem;margin-top:6px">This is a teaching-scale toy version. Real RSA uses primes hundreds of digits long; small numbers like these are not secure.</div>
+</div></section>`; }
+function runKuttaka(){
+  const p=+document.getElementById("ku_p").value, q=+document.getElementById("ku_q").value;
+  const e=+document.getElementById("ku_e").value, m=+document.getElementById("ku_m").value;
+  const out=document.getElementById("ku_out"); const n=p*q, phi=(p-1)*(q-1);
+  try{
+    const d=modInverse(e,phi);
+    let h=`<div>n = p × q = <b>${n}</b>, φ(n) = (p−1)(q−1) = <b>${phi}</b></div>`;
+    h+=`<div>Kuṭṭaka finds d so that e × d leaves remainder 1 when divided by φ(n) → <b>d = ${d}</b></div>`;
+    if(m<0||m>=n){ h+=`<div style="color:var(--warn)">The message must be a whole number from 0 to ${n-1}.</div>`; }
+    else{
+      const c=powModBig(m,e,n), back=powModBig(c,d,n);
+      h+=`<div>Encrypt with the public key: c = m^e mod n = <b>${c}</b></div>`;
+      h+=`<div>Decrypt with the private key kuṭṭaka found: m = c^d mod n = <b>${back}</b></div>`;
+      h+=`<div>${Number(back)===m?"Round-trip correct ✅":"Round-trip FAILED ⚠"}</div>`;
+    }
+    out.innerHTML=h;
+  }catch(ex){ out.innerHTML=`<div style="color:var(--warn)">${ex.message} — try a public exponent that shares no common factor with φ(n).</div>`; }
+}
+
+main.innerHTML = sec_chandas()+sec_kaprekar()+sec_sandhi()+sec_nyaya()+sec_ethics()+sec_vedic()+sec_kuttaka();
 showModule("chandas");
 </script>
 </body>
